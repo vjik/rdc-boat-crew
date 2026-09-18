@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Подбиратор экипажа</title>
+<meta name="description" content="Формирование экипажа лодки-дракона RDC">
+<meta name="theme-color" content="#040b14">
+<meta name="color-scheme" content="dark">
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Экипаж">
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="intro" class="intro" role="presentation">
+  <canvas id="intro-canvas" class="intro-canvas" aria-hidden="true"></canvas>
+  <div class="intro-content">
+    <p class="intro-eyebrow">RDC · СИСТЕМА ФОРМИРОВАНИЯ ЭКИПАЖА</p>
+    <h1 class="intro-title">
+      <span class="intro-title-line">Подбиратор</span>
+      <span class="intro-title-line">экипажа</span>
+    </h1>
+  </div>
+  <button id="intro-skip" class="intro-skip" type="button">Пропустить ↦</button>
+</div>
+
+<div id="app" class="app" hidden>
+
+  <header class="app-header">
+    <div class="app-title">
+      <span class="app-title-main">Подбиратор экипажа</span>
+      <span class="app-title-sub">Экипаж лодки-дракона</span>
+    </div>
+    <button id="install-pwa" class="btn btn-add" type="button" hidden>
+      <span aria-hidden="true">⇩</span> Установить
+    </button>
+  </header>
+
+  <main class="app-body">
+
+    <section class="pane boat-pane" aria-label="Схема лодки">
+      <div class="pane-header">
+        <h2>Лодка <span id="crew-count" class="roster-count"></span></h2>
+        <div class="legend">
+          <span class="legend-item"><i class="dot dot--approved" aria-hidden="true"></i>Утверждено</span>
+          <span class="legend-item"><i class="dot dot--questioned" aria-hidden="true"></i>Под вопросом</span>
+          <span class="legend-item"><i class="dot dot--maybe" aria-hidden="true"></i>Возможно</span>
+        </div>
+      </div>
+      <div class="weight-bar" id="weight-bar">
+        <div class="weight-item weight-item--left" id="weight-left">
+          <span class="weight-label">Лево</span>
+          <span class="weight-value" id="weight-left-value">0 кг</span>
+        </div>
+        <div class="weight-item weight-item--total">
+          <span class="weight-label">Вес лодки</span>
+          <span class="weight-value" id="weight-total-value">0 кг</span>
+        </div>
+        <div class="weight-item weight-item--right" id="weight-right">
+          <span class="weight-label">Право</span>
+          <span class="weight-value" id="weight-right-value">0 кг</span>
+        </div>
+      </div>
+      <div class="boat-scroll">
+        <div class="boat-hull" id="boat-hull"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">RDC 2026</footer>
+
+</div>
+
+<div id="seat-modal" class="modal-overlay" hidden>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="seat-modal-title">
+    <div class="modal-header">
+      <h3 id="seat-modal-title">Место</h3>
+      <button id="seat-modal-close" class="modal-close" type="button" aria-label="Закрыть">×</button>
+    </div>
+
+    <div class="modal-current" id="seat-modal-current"></div>
+
+    <div id="seat-modal-pick-section">
+      <div class="modal-list-header">
+        <h4>Выбрать человека</h4>
+        <button id="modal-add-person" class="btn btn-add-small" type="button">
+          <span aria-hidden="true">＋</span> Новый
+        </button>
+      </div>
+      <div class="modal-list" id="seat-modal-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="install-hint-modal" class="modal-overlay" hidden>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="install-hint-title">
+    <div class="modal-header">
+      <h3 id="install-hint-title">Установить на экран</h3>
+      <button id="install-hint-close" class="modal-close" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <div class="modal-current">
+      <p class="modal-current-empty">В Safari нажмите «Поделиться» <span aria-hidden="true">⎋</span> внизу экрана, затем выберите «На экран «Домой»».</p>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
