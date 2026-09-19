@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Экипаж">
 
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?1">
 </head>
 <body>
 
@@ -38,22 +38,22 @@
   <header class="app-header">
     <div class="app-title">
       <span class="app-title-main">Подбиратор экипажа</span>
-      <span class="app-title-sub">Экипаж лодки-дракона</span>
     </div>
-    <button id="install-pwa" class="btn btn-add" type="button" hidden>
-      <span aria-hidden="true">⇩</span> Установить
-    </button>
+    <div class="header-actions">
+      <button id="open-people" class="btn" type="button">Люди</button>
+      <button id="install-pwa" class="btn btn-icon" type="button" hidden aria-label="Установить">
+        <span aria-hidden="true">⇩</span>
+      </button>
+    </div>
   </header>
 
   <main class="app-body">
 
     <section class="pane boat-pane" aria-label="Схема лодки">
       <div class="pane-header">
-        <h2>Лодка <span id="crew-count" class="roster-count"></span></h2>
         <div class="legend">
           <span class="legend-item"><i class="dot dot--approved" aria-hidden="true"></i>Утверждено</span>
           <span class="legend-item"><i class="dot dot--questioned" aria-hidden="true"></i>Под вопросом</span>
-          <span class="legend-item"><i class="dot dot--maybe" aria-hidden="true"></i>Возможно</span>
         </div>
       </div>
       <div class="weight-bar" id="weight-bar">
@@ -77,7 +77,6 @@
 
   </main>
 
-  <footer class="app-footer">RDC 2026</footer>
 
 </div>
 
@@ -93,12 +92,36 @@
     <div id="seat-modal-pick-section">
       <div class="modal-list-header">
         <h4>Выбрать человека</h4>
-        <button id="modal-add-person" class="btn btn-add-small" type="button">
-          <span aria-hidden="true">＋</span> Новый
-        </button>
       </div>
       <div class="modal-list" id="seat-modal-list"></div>
     </div>
+  </div>
+</div>
+
+<div id="people-modal" class="modal-overlay" hidden>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="people-modal-title">
+    <div class="modal-header">
+      <h3 id="people-modal-title">Люди</h3>
+      <button id="people-modal-close" class="modal-close" type="button" aria-label="Закрыть">×</button>
+    </div>
+
+    <div class="modal-list-header">
+      <h4>Все участники</h4>
+      <button id="people-add-person" class="btn btn-add-small" type="button">
+        <span aria-hidden="true">＋</span> Новый
+      </button>
+    </div>
+    <div class="modal-list" id="people-modal-list"></div>
+  </div>
+</div>
+
+<div id="side-modal" class="modal-overlay" hidden>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="side-modal-title">
+    <div class="modal-header">
+      <h3 id="side-modal-title">Борт</h3>
+      <button id="side-modal-close" class="modal-close" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <div class="modal-list" id="side-modal-list"></div>
   </div>
 </div>
 
@@ -114,6 +137,6 @@
   </div>
 </div>
 
-<script src="js/app.js"></script>
+<script src="js/app.js?1"></script>
 </body>
 </html>

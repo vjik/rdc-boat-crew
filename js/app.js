@@ -13,11 +13,26 @@
     { key: "maybe", label: "Возможно" }
   ];
 
+  var SIDE_LIST = [
+    { key: "l", label: "Л" },
+    { key: null, label: "У" },
+    { key: "r", label: "П" }
+  ];
+
+  var SIDE_MODAL_OPTIONS = [
+    { key: "l", label: "Левый" },
+    { key: null, label: "Универсал" },
+    { key: "r", label: "Правый" }
+  ];
+
+  var SIDE_WARNING_LABELS = { l: "левый", r: "правый" };
+  var SIDE_FULL_LABELS = { l: "левый", r: "правый" };
+
   var DEFAULT_ROWER_NAMES = [
     "Пре**ев", "Лап**ев", "Шма**ов", "Кли**ов", "Сте**ов",
     "Слу**ий", "Ант**ов", "Кра**ко", "Сам**ин", "Мед**ев",
     "Лих**ёв", "Дол**ко", "Ино**ев", "Лед**ёв", "Ва**ин",
-    "Сол**ко", "Тим**ев"
+    "Сол**ко", "Тим**ев", "Дав**в"
   ];
 
   var DEFAULT_SEAT_ASSIGNMENTS = {
@@ -41,17 +56,37 @@
     "person-steer": "steer"
   };
 
+  // Default side restriction per person id: "l" (only left), "r" (only right), or omit for "either".
+  var DEFAULT_PERSON_SIDES = {
+    "person-1": "l",
+    "person-2": "l",
+    "person-3": "l",
+    "person-6": "l",
+    "person-7": "l",
+    "person-8": "r",
+    "person-9": "r",
+    "person-10": "r",
+    "person-11": "r",
+    "person-12": "r",
+    "person-13": "r",
+    "person-14": "r",
+    "person-15": "r",
+    "person-16": "r",
+    "person-18": "l"
+  };
+
   var SEATS = buildSeatDefinitions();
   var state = loadState();
   var activeModalSeatId = null;
   var activeModalMode = "pick";
   var suppressNextClick = false;
+  var activeSideModalPersonId = null;
 
   function buildSeatDefinitions() {
     var seats = [{ id: "drummer", label: "Барабанщик", fullLabel: "Барабанщик" }];
     for (var i = 1; i <= 10; i++) {
-      seats.push({ id: "bank-" + i + "-l", label: "Б" + i + " / Л", fullLabel: "Банка " + i + " · лево" });
-      seats.push({ id: "bank-" + i + "-r", label: "Б" + i + " / П", fullLabel: "Банка " + i + " · право" });
+      seats.push({ id: "bank-" + i + "-l", bankLabel: "Банка " + i, sideWord: "Лево", fullLabel: "Банка " + i + " · лево" });
+      seats.push({ id: "bank-" + i + "-r", bankLabel: "Банка " + i, sideWord: "Право", fullLabel: "Банка " + i + " · право" });
     }
     seats.push({ id: "steer", label: "Рулевой", fullLabel: "Рулевой" });
     return seats;
@@ -66,16 +101,10 @@
 
   function defaultPeople() {
     var people = [];
-    var genericIndex = 1;
-    for (var i = 1; i <= 20; i++) {
-      var name = DEFAULT_ROWER_NAMES[i - 1] || ("Человек " + genericIndex++);
-      people.push({ id: "person-" + i, name: name, weight: 80, seatId: null, status: null });
+    for (var i = 1; i <= DEFAULT_ROWER_NAMES.length; i++) {
+      people.push({ id: "person-" + i, name: DEFAULT_ROWER_NAMES[i - 1], weight: 80, seatId: null, status: null, side: null });
     }
-    people.push({ id: "person-drummer", name: "Человек " + genericIndex++, weight: 80, seatId: null, status: null });
-    people.push({ id: "person-steer", name: "Бор**ин", weight: 80, seatId: null, status: null });
-
-    var davydov = people.filter(function (p) { return p.id === "person-18"; })[0];
-    if (davydov) davydov.name = "Дав**в";
+    people.push({ id: "person-steer", name: "Бор**ин", weight: 80, seatId: null, status: null, side: null });
 
     people.forEach(function (p) {
       var seatId = DEFAULT_SEAT_ASSIGNMENTS[p.id];
@@ -83,6 +112,8 @@
         p.seatId = seatId;
         p.status = DEFAULT_STATUS;
       }
+      var side = DEFAULT_PERSON_SIDES[p.id];
+      if (side) p.side = side;
     });
 
     return people;
@@ -180,6 +211,17 @@
     }
   }
 
+  // Nearest empty bank seat index on `side` around `aroundIdx` (ties broken towards bank 1).
+  function findNearestEmptyBankIdx(side, aroundIdx) {
+    for (var d = 1; d <= 10; d++) {
+      var down = aroundIdx - d;
+      if (down >= 1 && !findOccupant("bank-" + down + "-" + side)) return down;
+      var up = aroundIdx + d;
+      if (up <= 10 && !findOccupant("bank-" + up + "-" + side)) return up;
+    }
+    return null;
+  }
+
   function handleSeatDrop(sourcePersonId, sourceSeatId, targetSeatId) {
     if (!targetSeatId || sourceSeatId === targetSeatId) return;
     var sourcePerson = findPerson(sourcePersonId);
@@ -189,10 +231,26 @@
     var targetSide = getSeatSide(targetSeatId);
     var targetOccupant = findOccupant(targetSeatId);
 
-    if (sourceSide && sourceSide === targetSide) {
+    if (sourceSide && targetSide && sourceSide === targetSide) {
       if (targetOccupant) cascadeShift(sourceSide, sourceSeatId, targetSeatId);
       sourcePerson.seatId = targetSeatId;
       saveState();
+    } else if (sourceSide && targetSide && sourceSide !== targetSide) {
+      // Moving to the other side: shift the chain on that side to make room when possible,
+      // and only bump the occupant off the boat when there's truly no free seat to shift into.
+      if (targetOccupant) {
+        var emptyIdx = findNearestEmptyBankIdx(targetSide, parseBankNumber(targetSeatId));
+        if (emptyIdx !== null) {
+          cascadeShift(targetSide, "bank-" + emptyIdx + "-" + targetSide, targetSeatId);
+          sourcePerson.seatId = targetSeatId;
+          saveState();
+        } else {
+          assignPersonToSeat(sourcePersonId, targetSeatId);
+        }
+      } else {
+        sourcePerson.seatId = targetSeatId;
+        saveState();
+      }
     } else if (sourceSide === null && targetSide === null) {
       if (targetOccupant) targetOccupant.seatId = sourceSeatId;
       sourcePerson.seatId = targetSeatId;
@@ -205,9 +263,9 @@
 
   function addPerson() {
     var id = "person-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
-    state.people.push({ id: id, name: "Новый участник", weight: 80, seatId: null, status: null });
+    state.people.push({ id: id, name: "Новый участник", weight: 80, seatId: null, status: null, side: null });
     saveState();
-    renderSeatModal();
+    renderPeopleModal();
     requestAnimationFrame(function () {
       var input = document.querySelector('[data-person-id="' + id + '"] .person-name');
       if (input) {
@@ -221,19 +279,13 @@
     state.people = state.people.filter(function (p) { return p.id !== id; });
     saveState();
     renderBoat();
-    renderSeatModal();
+    renderPeopleModal();
   }
 
   /* ===== Rendering: boat ===== */
 
   function render() {
     renderBoat();
-    renderCrewCount();
-  }
-
-  function renderCrewCount() {
-    var assigned = state.people.filter(function (p) { return p.seatId; }).length;
-    document.getElementById("crew-count").textContent = assigned + " / " + state.people.length + " в лодке";
   }
 
   function computeWeights() {
@@ -307,19 +359,30 @@
     hull.appendChild(rowsWrap);
     hull.appendChild(renderSeatSlot(findSeat("steer")));
 
-    renderCrewCount();
     renderWeights();
   }
 
   function renderSeatSlot(seatDef) {
     var occupant = findOccupant(seatDef.id);
+    var seatSide = getSeatSide(seatDef.id);
+    var sideMismatch = !!(occupant && occupant.side && seatSide && occupant.side !== seatSide);
 
     var wrap = document.createElement("div");
     wrap.className = "seat-slot";
 
+    var bankIdx = parseBankNumber(seatDef.id);
+    if (bankIdx !== null) {
+      var bankNum = document.createElement("span");
+      bankNum.className = "bank-number bank-number--" + seatSide;
+      bankNum.textContent = bankIdx;
+      bankNum.setAttribute("aria-hidden", "true");
+      wrap.appendChild(bankNum);
+    }
+
     var seat = document.createElement("div");
     seat.className = "seat" + (occupant ? " seat--filled" : "");
     if (occupant && occupant.status) seat.classList.add("seat--" + occupant.status);
+    if (sideMismatch) seat.classList.add("seat--side-mismatch");
     seat.dataset.seatId = seatDef.id;
     seat.title = seatDef.fullLabel;
 
@@ -338,6 +401,23 @@
       weightSpan.className = "seat-weight";
       weightSpan.textContent = occupant.weight + " кг";
       mainBtn.appendChild(weightSpan);
+
+      if (sideMismatch) {
+        var warnSpan = document.createElement("span");
+        warnSpan.className = "seat-side-warning";
+        warnSpan.textContent = SIDE_WARNING_LABELS[occupant.side];
+        mainBtn.appendChild(warnSpan);
+      }
+    } else if (seatDef.bankLabel) {
+      var bankLine = document.createElement("span");
+      bankLine.className = "seat-label-line";
+      bankLine.textContent = seatDef.bankLabel;
+      mainBtn.appendChild(bankLine);
+
+      var sideLine = document.createElement("span");
+      sideLine.className = "seat-label-line seat-label-line--side";
+      sideLine.textContent = seatDef.sideWord;
+      mainBtn.appendChild(sideLine);
     } else {
       var labelSpan = document.createElement("span");
       labelSpan.className = "seat-label";
@@ -459,7 +539,7 @@
       personRow.appendChild(nameSpan);
       var weightSpan = document.createElement("span");
       weightSpan.className = "modal-current-weight";
-      weightSpan.textContent = occupant.weight + " кг";
+      weightSpan.textContent = occupant.weight + " кг · " + sideFullLabel(occupant.side);
       personRow.appendChild(weightSpan);
       currentWrap.appendChild(personRow);
 
@@ -506,15 +586,138 @@
     if (activeModalMode === "pick") {
       var list = document.getElementById("seat-modal-list");
       list.innerHTML = "";
-      state.people
-        .filter(function (p) { return !occupant || p.id !== occupant.id; })
-        .forEach(function (person) {
-          list.appendChild(renderModalPersonRow(person, seatDef));
+      var freePeople = state.people.filter(function (p) { return !p.seatId; });
+      if (freePeople.length === 0) {
+        var empty = document.createElement("p");
+        empty.className = "modal-current-empty";
+        empty.textContent = "Нет свободных участников";
+        list.appendChild(empty);
+      } else {
+        freePeople.forEach(function (person) {
+          list.appendChild(renderSeatPickRow(person, seatDef));
         });
+      }
     }
   }
 
-  function renderModalPersonRow(person, seatDef) {
+  function renderSeatPickRow(person, seatDef) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "modal-row modal-row--pick";
+    btn.dataset.personId = person.id;
+
+    var nameSpan = document.createElement("span");
+    nameSpan.className = "modal-row-pick-name";
+    nameSpan.textContent = person.name;
+    btn.appendChild(nameSpan);
+
+    var weightSpan = document.createElement("span");
+    weightSpan.className = "modal-row-pick-weight";
+    weightSpan.textContent = person.weight + " кг · " + sideFullLabel(person.side);
+    btn.appendChild(weightSpan);
+
+    btn.addEventListener("click", function () {
+      assignPersonToSeat(person.id, seatDef.id);
+      renderBoat();
+      closeSeatModal();
+    });
+
+    return btn;
+  }
+
+  /* ===== People modal ===== */
+
+  function openPeopleModal() {
+    renderPeopleModal();
+    document.getElementById("people-modal").hidden = false;
+  }
+
+  function closePeopleModal() {
+    document.getElementById("people-modal").hidden = true;
+  }
+
+  function renderPeopleModal() {
+    var list = document.getElementById("people-modal-list");
+    list.innerHTML = "";
+    if (state.people.length === 0) {
+      var empty = document.createElement("p");
+      empty.className = "modal-current-empty";
+      empty.textContent = "Список пуст";
+      list.appendChild(empty);
+      return;
+    }
+    state.people.forEach(function (person) {
+      list.appendChild(renderPersonRow(person));
+    });
+  }
+
+  function sideLabel(side) {
+    var found = SIDE_LIST.filter(function (s) { return (s.key || null) === (side || null); })[0];
+    return found ? found.label : "У";
+  }
+
+  function sideFullLabel(side) {
+    return SIDE_FULL_LABELS[side] || "универсал";
+  }
+
+  function renderSideSelectButton(person) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "side-select-btn";
+    btn.textContent = sideLabel(person.side);
+    btn.setAttribute("aria-label", "Борт: " + sideLabel(person.side));
+    btn.addEventListener("click", function () {
+      openSideModal(person.id);
+    });
+    return btn;
+  }
+
+  /* ===== Side modal ===== */
+
+  function openSideModal(personId) {
+    activeSideModalPersonId = personId;
+    renderSideModal();
+    document.getElementById("side-modal").hidden = false;
+  }
+
+  function closeSideModal() {
+    activeSideModalPersonId = null;
+    document.getElementById("side-modal").hidden = true;
+  }
+
+  function renderSideModal() {
+    var person = findPerson(activeSideModalPersonId);
+    if (!person) return;
+
+    document.getElementById("side-modal-title").textContent = person.name;
+
+    var list = document.getElementById("side-modal-list");
+    list.innerHTML = "";
+    var current = person.side || null;
+
+    SIDE_MODAL_OPTIONS.forEach(function (opt) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "modal-row modal-row--pick" + (current === opt.key ? " is-active" : "");
+
+      var label = document.createElement("span");
+      label.className = "modal-row-pick-name";
+      label.textContent = opt.label;
+      btn.appendChild(label);
+
+      btn.addEventListener("click", function () {
+        person.side = opt.key;
+        saveState();
+        renderBoat();
+        renderPeopleModal();
+        closeSideModal();
+      });
+
+      list.appendChild(btn);
+    });
+  }
+
+  function renderPersonRow(person) {
     var row = document.createElement("div");
     row.className = "modal-row";
     row.dataset.personId = person.id;
@@ -569,26 +772,7 @@
     fields.appendChild(weightWrap);
 
     row.appendChild(fields);
-
-    if (person.seatId) {
-      var otherSeat = findSeat(person.seatId);
-      var badge = document.createElement("span");
-      badge.className = "modal-row-badge";
-      badge.textContent = otherSeat ? otherSeat.label : "";
-      row.appendChild(badge);
-    }
-
-    var pickBtn = document.createElement("button");
-    pickBtn.type = "button";
-    pickBtn.className = "modal-row-pick";
-    pickBtn.setAttribute("aria-label", "Посадить на это место");
-    pickBtn.textContent = "→";
-    pickBtn.addEventListener("click", function () {
-      assignPersonToSeat(person.id, seatDef.id);
-      renderBoat();
-      closeSeatModal();
-    });
-    row.appendChild(pickBtn);
+    row.appendChild(renderSideSelectButton(person));
 
     var delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -841,12 +1025,27 @@
     render();
 
     document.getElementById("seat-modal-close").addEventListener("click", closeSeatModal);
-    document.getElementById("modal-add-person").addEventListener("click", addPerson);
     document.getElementById("seat-modal").addEventListener("click", function (e) {
       if (e.target.id === "seat-modal") closeSeatModal();
     });
+
+    document.getElementById("open-people").addEventListener("click", openPeopleModal);
+    document.getElementById("people-modal-close").addEventListener("click", closePeopleModal);
+    document.getElementById("people-add-person").addEventListener("click", addPerson);
+    document.getElementById("people-modal").addEventListener("click", function (e) {
+      if (e.target.id === "people-modal") closePeopleModal();
+    });
+
+    document.getElementById("side-modal-close").addEventListener("click", closeSideModal);
+    document.getElementById("side-modal").addEventListener("click", function (e) {
+      if (e.target.id === "side-modal") closeSideModal();
+    });
+
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && activeModalSeatId) closeSeatModal();
+      if (e.key !== "Escape") return;
+      if (activeSideModalPersonId) { closeSideModal(); return; }
+      if (activeModalSeatId) closeSeatModal();
+      if (!document.getElementById("people-modal").hidden) closePeopleModal();
     });
 
     initIntro();
