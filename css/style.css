@@ -539,28 +539,6 @@ body {
 
 body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbing; }
 
-.seat-status-zone {
-  flex: 0 0 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-dim);
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.seat-status-zone:hover { background: rgba(255, 255, 255, 0.09); }
-.seat-status-zone:active { transform: scale(0.94); }
-
-.seat-status-zone--approved { color: var(--approved); }
-.seat-status-zone--questioned { color: var(--questioned); }
-.seat-status-zone--maybe { color: var(--maybe); }
-
 .seat--approved { border-color: var(--approved); box-shadow: 0 0 16px rgba(41, 255, 176, 0.45); }
 .seat--questioned { border-color: var(--questioned); box-shadow: 0 0 16px rgba(255, 179, 71, 0.45); }
 .seat--maybe { border-color: var(--maybe); box-shadow: 0 0 12px rgba(154, 168, 181, 0.4); }
@@ -685,10 +663,10 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
 .modal-current-name { font-size: 15px; font-weight: 700; }
 .modal-current-weight { font-size: 12.5px; color: var(--text-dim); }
 
-.status-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.status-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 
 .status-dot {
-  flex: 1 1 0;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

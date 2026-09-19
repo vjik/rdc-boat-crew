@@ -80,7 +80,6 @@
   var SEATS = buildSeatDefinitions();
   var state = loadState();
   var activeModalSeatId = null;
-  var activeModalMode = "pick";
   var suppressNextClick = false;
   var activeSideModalPersonId = null;
 
@@ -521,21 +520,10 @@
 
     mainBtn.addEventListener("click", function () {
       if (suppressNextClick) { suppressNextClick = false; return; }
-      openSeatModal(seatDef.id, "pick");
+      openSeatModal(seatDef.id);
     });
     if (occupant) attachSeatDrag(mainBtn, seat, seatDef.id, occupant.id);
     seat.appendChild(mainBtn);
-
-    if (occupant) {
-      var statusBtn = document.createElement("button");
-      statusBtn.type = "button";
-      statusBtn.className = "seat-status-zone";
-      if (occupant.status) statusBtn.classList.add("seat-status-zone--" + occupant.status);
-      statusBtn.setAttribute("aria-label", "Статус и снятие с места: " + seatDef.fullLabel);
-      statusBtn.textContent = "⋮";
-      statusBtn.addEventListener("click", function () { openSeatModal(seatDef.id, "manage"); });
-      seat.appendChild(statusBtn);
-    }
 
     wrap.appendChild(seat);
     return wrap;
@@ -601,9 +589,8 @@
 
   /* ===== Seat modal ===== */
 
-  function openSeatModal(seatId, mode) {
+  function openSeatModal(seatId) {
     activeModalSeatId = seatId;
-    activeModalMode = mode || "pick";
     renderSeatModal();
     document.getElementById("seat-modal").hidden = false;
   }
@@ -637,36 +624,34 @@
       personRow.appendChild(weightSpan);
       currentWrap.appendChild(personRow);
 
-      if (activeModalMode === "manage") {
-        var statusRow = document.createElement("div");
-        statusRow.className = "status-row";
-        STATUS_LIST.forEach(function (s) {
-          var btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "status-dot status-dot--" + s.key + (occupant.status === s.key ? " is-active" : "");
-          btn.textContent = s.label;
-          btn.addEventListener("click", function (statusKey) {
-            return function () {
-              setStatus(occupant.id, statusKey);
-              renderBoat();
-              closeSeatModal();
-            };
-          }(s.key));
-          statusRow.appendChild(btn);
-        });
-        currentWrap.appendChild(statusRow);
+      var statusRow = document.createElement("div");
+      statusRow.className = "status-row";
+      STATUS_LIST.forEach(function (s) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "status-dot status-dot--" + s.key + (occupant.status === s.key ? " is-active" : "");
+        btn.textContent = s.label;
+        btn.addEventListener("click", function (statusKey) {
+          return function () {
+            setStatus(occupant.id, statusKey);
+            renderBoat();
+            closeSeatModal();
+          };
+        }(s.key));
+        statusRow.appendChild(btn);
+      });
+      currentWrap.appendChild(statusRow);
 
-        var removeBtn = document.createElement("button");
-        removeBtn.type = "button";
-        removeBtn.className = "btn-remove-seat";
-        removeBtn.textContent = "Снять с банки";
-        removeBtn.addEventListener("click", function () {
-          unassignPerson(occupant.id);
-          renderBoat();
-          closeSeatModal();
-        });
-        currentWrap.appendChild(removeBtn);
-      }
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn-remove-seat";
+      removeBtn.textContent = "Снять с банки";
+      removeBtn.addEventListener("click", function () {
+        unassignPerson(occupant.id);
+        renderBoat();
+        closeSeatModal();
+      });
+      currentWrap.appendChild(removeBtn);
     } else {
       var empty = document.createElement("p");
       empty.className = "modal-current-empty";
@@ -674,23 +659,18 @@
       currentWrap.appendChild(empty);
     }
 
-    var pickSection = document.getElementById("seat-modal-pick-section");
-    pickSection.hidden = activeModalMode !== "pick";
-
-    if (activeModalMode === "pick") {
-      var list = document.getElementById("seat-modal-list");
-      list.innerHTML = "";
-      var freePeople = activePeople().filter(function (p) { return !p.seatId; });
-      if (freePeople.length === 0) {
-        var empty = document.createElement("p");
-        empty.className = "modal-current-empty";
-        empty.textContent = "Нет свободных участников";
-        list.appendChild(empty);
-      } else {
-        freePeople.forEach(function (person) {
-          list.appendChild(renderSeatPickRow(person, seatDef));
-        });
-      }
+    var list = document.getElementById("seat-modal-list");
+    list.innerHTML = "";
+    var freePeople = activePeople().filter(function (p) { return !p.seatId; });
+    if (freePeople.length === 0) {
+      var emptyList = document.createElement("p");
+      emptyList.className = "modal-current-empty";
+      emptyList.textContent = "Нет свободных участников";
+      list.appendChild(emptyList);
+    } else {
+      freePeople.forEach(function (person) {
+        list.appendChild(renderSeatPickRow(person, seatDef));
+      });
     }
   }
 
