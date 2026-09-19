@@ -380,6 +380,11 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  /* Explicit (not just relying on html/body's overflow:hidden): without this, mixing
+     overflow-y:auto with an implicit overflow-x:visible makes the UA compute overflow-x
+     as auto too, so a bank number spilling past the hull could open horizontal scroll
+     inside this container specifically, before the window-level overflow ever kicks in. */
+  overflow-x: hidden;
   padding: 14px 10px 26px;
 }
 
@@ -392,6 +397,16 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+/* The boat-shaped background lives on a pseudo-element (instead of directly on .boat-hull)
+   so its clip-path only crops the shape itself, not the bank numbers that intentionally
+   spill past the hull's tapered edges near the bow/stern rows. */
+.boat-hull::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background:
     radial-gradient(ellipse 80% 40% at 50% 8%, rgba(74, 227, 255, 0.16), transparent 60%),
     linear-gradient(180deg, #0d2438 0%, #081726 55%, #05101c 100%);
