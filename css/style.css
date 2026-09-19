@@ -142,6 +142,7 @@ body {
 
 .intro-title-line:nth-child(1) { animation-delay: 0.35s; }
 .intro-title-line:nth-child(2) { animation-delay: 0.55s; }
+.intro-title-line:nth-child(3) { animation-delay: 0.75s; }
 
 @keyframes intro-fade-up {
   to { opacity: 1; transform: translateY(0); }
@@ -217,15 +218,39 @@ body {
   font-size: clamp(16px, 4vw, 20px);
   font-weight: 700;
   letter-spacing: 0.01em;
-  background: linear-gradient(90deg, #fff, var(--cyan));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+  color: var(--cyan); /* fallback: always-visible solid color (see @supports below) */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+@supports (-webkit-background-clip: text) or (background-clip: text) {
+  .app-title-main {
+    background: linear-gradient(90deg, #fff, var(--cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+.app-title-btn {
+  appearance: none;
+  border: none;
+  /* background-color (not the `background` shorthand) so this reset doesn't clobber
+     .app-title-main's gradient background-image used for the text-clip effect above. */
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.app-title-btn:hover { opacity: 0.85; }
 
 .btn {
   flex: 0 0 auto;
@@ -733,6 +758,84 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
 }
 
 .btn-add-small:hover { border-color: var(--cyan-soft); }
+
+.profile-create {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px 20px;
+}
+
+.profile-new-name,
+.profile-import-select {
+  width: 100%;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-size: 13px;
+  padding: 10px;
+}
+
+.profile-import-label {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Chromium renders a native <select>'s open list using its <option> colors,
+   so this keeps the dropdown itself dark instead of the OS-default white/grey. */
+.profile-import-select option {
+  background: var(--panel-solid);
+  color: var(--text-main);
+}
+
+.profile-create-submit {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 999px;
+  border: 1px solid var(--cyan-soft);
+  background: rgba(74, 227, 255, 0.14);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-create-submit:hover { background: rgba(74, 227, 255, 0.22); }
+
+.profile-new-name::placeholder { color: var(--text-dim); }
+.profile-new-name:focus, .profile-import-select:focus { outline: none; border-color: var(--cyan-soft); }
+
+.profile-badge {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--cyan-soft);
+  background: rgba(74, 227, 255, 0.12);
+  color: var(--cyan);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.profile-open-btn {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: rgba(74, 227, 255, 0.08);
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.profile-open-btn:hover { border-color: var(--cyan-soft); }
 
 .modal-list {
   flex: 1 1 auto;

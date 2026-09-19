@@ -1,7 +1,9 @@
 (function () {
   "use strict";
 
-  var STORAGE_KEY = "rdc-boat-crew:v2";
+  var STORAGE_KEY = "rdc-boat-crew:v3";
+  var LEGACY_STORAGE_KEY = "rdc-boat-crew:v2";
+  var DEFAULT_PROFILE_NAME = "26.09.2026 Открытый класс";
   var DEFAULT_STATUS = "maybe";
   var EMPTY_BOAT_WEIGHT = 250;
   var WEIGHT_DIFF_FOR_FULL_TINT = 200;
@@ -119,17 +121,49 @@
     return people;
   }
 
+  function makePersonId() {
+    return "person-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+  }
+
+  function makeProfileId() {
+    return "profile-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+  }
+
+  function createProfile(name, peopleList) {
+    return { id: makeProfileId(), name: name, people: peopleList || [] };
+  }
+
+  function buildInitialState() {
+    // Migrate a pre-profiles save (single flat people list) into the default profile
+    // instead of discarding it, if one exists.
+    var initialPeople = null;
+    try {
+      var legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacyRaw) {
+        var legacyParsed = JSON.parse(legacyRaw);
+        if (legacyParsed && Array.isArray(legacyParsed.people)) initialPeople = legacyParsed.people;
+      }
+    } catch (e) {
+      // ignore, fall back to defaults below
+    }
+
+    var profile = createProfile(DEFAULT_PROFILE_NAME, initialPeople || defaultPeople());
+    return { activeProfileId: profile.id, profiles: [profile] };
+  }
+
   function loadState() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { people: defaultPeople() };
-      var parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.people)) return { people: defaultPeople() };
-      return parsed;
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.profiles) && parsed.profiles.length && parsed.activeProfileId) {
+          return parsed;
+        }
+      }
     } catch (e) {
       console.error("Не удалось прочитать сохранённые данные", e);
-      return { people: defaultPeople() };
     }
+    return buildInitialState();
   }
 
   function saveState() {
@@ -140,16 +174,74 @@
     }
   }
 
+  function findProfile(id) {
+    for (var i = 0; i < state.profiles.length; i++) {
+      if (state.profiles[i].id === id) return state.profiles[i];
+    }
+    return null;
+  }
+
+  function activeProfile() {
+    return findProfile(state.activeProfileId) || state.profiles[0];
+  }
+
+  function activePeople() {
+    return activeProfile().people;
+  }
+
+  function addProfile(name, importFromProfileId) {
+    var peopleList = [];
+    if (importFromProfileId) {
+      var source = findProfile(importFromProfileId);
+      if (source) {
+        peopleList = source.people.map(function (p) {
+          return { id: makePersonId(), name: p.name, weight: p.weight, side: p.side || null, seatId: null, status: null };
+        });
+      }
+    }
+    var profile = createProfile(name, peopleList);
+    state.profiles.push(profile);
+    state.activeProfileId = profile.id;
+    saveState();
+    return profile;
+  }
+
+  function deleteProfile(id) {
+    if (state.profiles.length <= 1) return false;
+    state.profiles = state.profiles.filter(function (p) { return p.id !== id; });
+    if (state.activeProfileId === id) state.activeProfileId = state.profiles[0].id;
+    saveState();
+    return true;
+  }
+
+  function renameProfile(id, name) {
+    var profile = findProfile(id);
+    if (!profile) return;
+    var trimmed = name.trim();
+    profile.name = trimmed || profile.name;
+    saveState();
+  }
+
+  function switchProfile(id) {
+    if (!findProfile(id) || id === state.activeProfileId) return;
+    state.activeProfileId = id;
+    saveState();
+    renderProfileButton();
+    renderBoat();
+  }
+
   function findPerson(id) {
-    for (var i = 0; i < state.people.length; i++) {
-      if (state.people[i].id === id) return state.people[i];
+    var people = activePeople();
+    for (var i = 0; i < people.length; i++) {
+      if (people[i].id === id) return people[i];
     }
     return null;
   }
 
   function findOccupant(seatId) {
-    for (var i = 0; i < state.people.length; i++) {
-      if (state.people[i].seatId === seatId) return state.people[i];
+    var people = activePeople();
+    for (var i = 0; i < people.length; i++) {
+      if (people[i].seatId === seatId) return people[i];
     }
     return null;
   }
@@ -157,7 +249,7 @@
   function assignPersonToSeat(personId, seatId) {
     var person = findPerson(personId);
     if (!person) return;
-    state.people.forEach(function (other) {
+    activePeople().forEach(function (other) {
       if (other.seatId === seatId && other.id !== personId) {
         other.seatId = null;
         other.status = null;
@@ -262,8 +354,8 @@
   }
 
   function addPerson() {
-    var id = "person-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
-    state.people.push({ id: id, name: "Новый участник", weight: 80, seatId: null, status: null, side: null });
+    var id = makePersonId();
+    activePeople().push({ id: id, name: "Новый участник", weight: 80, seatId: null, status: null, side: null });
     saveState();
     renderPeopleModal();
     requestAnimationFrame(function () {
@@ -276,7 +368,8 @@
   }
 
   function deletePerson(id) {
-    state.people = state.people.filter(function (p) { return p.id !== id; });
+    var profile = activeProfile();
+    profile.people = profile.people.filter(function (p) { return p.id !== id; });
     saveState();
     renderBoat();
     renderPeopleModal();
@@ -285,12 +378,13 @@
   /* ===== Rendering: boat ===== */
 
   function render() {
+    renderProfileButton();
     renderBoat();
   }
 
   function computeWeights() {
     var left = 0, right = 0, total = 0;
-    state.people.forEach(function (p) {
+    activePeople().forEach(function (p) {
       if (!p.seatId) return;
       total += p.weight;
       if (/-l$/.test(p.seatId)) left += p.weight;
@@ -586,7 +680,7 @@
     if (activeModalMode === "pick") {
       var list = document.getElementById("seat-modal-list");
       list.innerHTML = "";
-      var freePeople = state.people.filter(function (p) { return !p.seatId; });
+      var freePeople = activePeople().filter(function (p) { return !p.seatId; });
       if (freePeople.length === 0) {
         var empty = document.createElement("p");
         empty.className = "modal-current-empty";
@@ -625,6 +719,117 @@
     return btn;
   }
 
+  /* ===== Profile modal ===== */
+
+  function renderProfileButton() {
+    var btn = document.getElementById("open-profile");
+    if (btn) btn.textContent = activeProfile().name;
+  }
+
+  function openProfileModal() {
+    renderProfileModal();
+    document.getElementById("profile-modal").hidden = false;
+  }
+
+  function closeProfileModal() {
+    document.getElementById("profile-modal").hidden = true;
+  }
+
+  function renderProfileModal() {
+    var list = document.getElementById("profile-modal-list");
+    list.innerHTML = "";
+    state.profiles.forEach(function (profile) {
+      list.appendChild(renderProfileRow(profile));
+    });
+  }
+
+  function renderProfileImportSelect() {
+    var select = document.getElementById("profile-import-from");
+    select.innerHTML = "";
+
+    var noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "Не импортировать";
+    select.appendChild(noneOpt);
+
+    state.profiles.forEach(function (p) {
+      var opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    });
+  }
+
+  function openProfileCreateModal() {
+    document.getElementById("profile-new-name").value = "";
+    renderProfileImportSelect();
+    document.getElementById("profile-create-modal").hidden = false;
+    document.getElementById("profile-new-name").focus();
+  }
+
+  function closeProfileCreateModal() {
+    document.getElementById("profile-create-modal").hidden = true;
+  }
+
+  function renderProfileRow(profile) {
+    var row = document.createElement("div");
+    row.className = "modal-row";
+    row.dataset.profileId = profile.id;
+
+    var nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.className = "person-name";
+    nameInput.value = profile.name;
+    nameInput.maxLength = 60;
+    nameInput.setAttribute("aria-label", "Название профиля");
+    nameInput.setAttribute("autocomplete", "off");
+    nameInput.addEventListener("change", function () {
+      renameProfile(profile.id, nameInput.value);
+      nameInput.value = profile.name;
+      if (profile.id === state.activeProfileId) renderProfileButton();
+    });
+    row.appendChild(nameInput);
+
+    if (profile.id === state.activeProfileId) {
+      var badge = document.createElement("span");
+      badge.className = "profile-badge";
+      badge.textContent = "Текущий";
+      row.appendChild(badge);
+    } else {
+      var openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "profile-open-btn";
+      openBtn.textContent = "Открыть";
+      openBtn.addEventListener("click", function () {
+        switchProfile(profile.id);
+        closeProfileModal();
+      });
+      row.appendChild(openBtn);
+    }
+
+    var delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "modal-row-delete";
+    delBtn.setAttribute("aria-label", "Удалить профиль");
+    delBtn.textContent = "✕";
+    delBtn.hidden = state.profiles.length <= 1;
+    delBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (confirm('Удалить профиль «' + profile.name + '»? Все его данные (люди и рассадка) будут потеряны.')) {
+        var wasActive = profile.id === state.activeProfileId;
+        deleteProfile(profile.id);
+        renderProfileModal();
+        if (wasActive) {
+          renderProfileButton();
+          renderBoat();
+        }
+      }
+    });
+    row.appendChild(delBtn);
+
+    return row;
+  }
+
   /* ===== People modal ===== */
 
   function openPeopleModal() {
@@ -639,14 +844,15 @@
   function renderPeopleModal() {
     var list = document.getElementById("people-modal-list");
     list.innerHTML = "";
-    if (state.people.length === 0) {
+    var people = activePeople();
+    if (people.length === 0) {
       var empty = document.createElement("p");
       empty.className = "modal-current-empty";
       empty.textContent = "Список пуст";
       list.appendChild(empty);
       return;
     }
-    state.people.forEach(function (person) {
+    people.forEach(function (person) {
       list.appendChild(renderPersonRow(person));
     });
   }
@@ -1041,11 +1247,36 @@
       if (e.target.id === "side-modal") closeSideModal();
     });
 
+    document.getElementById("open-profile").addEventListener("click", openProfileModal);
+    document.getElementById("profile-modal-close").addEventListener("click", closeProfileModal);
+    document.getElementById("profile-modal").addEventListener("click", function (e) {
+      if (e.target.id === "profile-modal") closeProfileModal();
+    });
+
+    document.getElementById("profile-add").addEventListener("click", openProfileCreateModal);
+    document.getElementById("profile-create-close").addEventListener("click", closeProfileCreateModal);
+    document.getElementById("profile-create-modal").addEventListener("click", function (e) {
+      if (e.target.id === "profile-create-modal") closeProfileCreateModal();
+    });
+    document.getElementById("profile-create-btn").addEventListener("click", function () {
+      var nameInput = document.getElementById("profile-new-name");
+      var name = nameInput.value.trim();
+      if (!name) { nameInput.focus(); return; }
+      var importFromId = document.getElementById("profile-import-from").value || null;
+      addProfile(name, importFromId);
+      closeProfileCreateModal();
+      renderProfileButton();
+      renderBoat();
+      renderProfileModal();
+    });
+
     document.addEventListener("keydown", function (e) {
       if (e.key !== "Escape") return;
       if (activeSideModalPersonId) { closeSideModal(); return; }
+      if (!document.getElementById("profile-create-modal").hidden) { closeProfileCreateModal(); return; }
       if (activeModalSeatId) closeSeatModal();
       if (!document.getElementById("people-modal").hidden) closePeopleModal();
+      if (!document.getElementById("profile-modal").hidden) closeProfileModal();
     });
 
     initIntro();
