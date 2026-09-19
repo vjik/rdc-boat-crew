@@ -1,6 +1,7 @@
 {
   "name": "Система формирования экипажа",
   "short_name": "Экипаж",
+  "version": "1.0.1",
   "description": "Формирование экипажа лодки-дракона RDC",
   "start_url": "./index.html",
   "scope": "./",

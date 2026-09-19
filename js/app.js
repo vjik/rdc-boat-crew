@@ -84,12 +84,12 @@
   var activeSideModalPersonId = null;
 
   function buildSeatDefinitions() {
-    var seats = [{ id: "drummer", label: "Барабанщик", fullLabel: "Барабанщик" }];
+    var seats = [{ id: "drummer", label: "барабан", fullLabel: "барабан" }];
     for (var i = 1; i <= 10; i++) {
       seats.push({ id: "bank-" + i + "-l", bankLabel: "Банка " + i, sideWord: "Лево", fullLabel: "Банка " + i + " · лево" });
       seats.push({ id: "bank-" + i + "-r", bankLabel: "Банка " + i, sideWord: "Право", fullLabel: "Банка " + i + " · право" });
     }
-    seats.push({ id: "steer", label: "Рулевой", fullLabel: "Рулевой" });
+    seats.push({ id: "steer", label: "руль", fullLabel: "руль" });
     return seats;
   }
 
