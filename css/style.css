@@ -385,13 +385,13 @@ body {
      as auto too, so a bank number spilling past the hull could open horizontal scroll
      inside this container specifically, before the window-level overflow ever kicks in. */
   overflow-x: hidden;
-  padding: 14px 10px 26px;
+  padding: 0;
 }
 
 .boat-hull {
   position: relative;
   margin: 0 auto;
-  width: min(440px, 100%);
+  width: 100%;
   padding: 30px 10px;
   display: flex;
   flex-direction: column;
@@ -405,12 +405,15 @@ body {
 .boat-hull::before {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
   z-index: -1;
   background:
     radial-gradient(ellipse 80% 40% at 50% 8%, rgba(74, 227, 255, 0.16), transparent 60%),
     linear-gradient(180deg, #0d2438 0%, #081726 55%, #05101c 100%);
-  border: 1px solid rgba(120, 220, 255, 0.18);
+  border: none;
   clip-path: polygon(50% 0%, 90% 6%, 100% 40%, 100% 60%, 90% 94%, 50% 100%, 10% 94%, 0% 60%, 0% 40%, 10% 6%);
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35), 0 0 30px rgba(74, 227, 255, 0.06);
 }
@@ -571,6 +574,74 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
   width: 148px;
   min-height: 62px;
   border-color: rgba(150, 110, 255, 0.45);
+}
+
+.copy-crew-btn {
+  position: relative;
+  z-index: 2;
+  margin: 22px 0 0;
+  padding: 12px 22px;
+  border: 1px solid rgba(74, 227, 255, 0.4);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(74, 227, 255, 0.22), rgba(150, 110, 255, 0.2));
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(74, 227, 255, 0.14);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.copy-crew-btn:hover { box-shadow: 0 0 28px rgba(74, 227, 255, 0.35); }
+.copy-crew-btn:active { transform: scale(0.96); }
+
+/* ===== Copy success overlay ===== */
+.copy-success {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(1, 12, 14, 0.48);
+  backdrop-filter: blur(9px) saturate(1.35);
+  opacity: 1;
+  transition: opacity 0.7s ease;
+}
+.copy-success--leaving { opacity: 0; pointer-events: none; }
+.copy-success-message--leaving {
+  opacity: 0 !important;
+  transform: scale(0.96) !important;
+}
+
+.copy-success-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.copy-success-message {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 22px 34px;
+  border: none;
+  border-radius: 0;
+  background: rgba(7, 24, 35, 0.78);
+  box-shadow: none;
+  color: #ffffff;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 1.45s ease, transform 1.45s ease;
+  animation: none;
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: clamp(36px, 10vw, 76px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-shadow: none;
+  animation: copy-success-pop 0.55s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+@keyframes copy-success-pop {
+  from { opacity: 0; transform: scale(0.65); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* ===== Seat modal ===== */

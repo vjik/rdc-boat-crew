@@ -452,7 +452,96 @@
     hull.appendChild(rowsWrap);
     hull.appendChild(renderSeatSlot(findSeat("steer")));
 
+    var copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.id = "copy-crew";
+    copyBtn.className = "copy-crew-btn";
+    copyBtn.textContent = "Скопировать состав";
+    copyBtn.addEventListener("click", copyCrew);
+    hull.appendChild(copyBtn);
+
     renderWeights();
+  }
+
+  function buildCrewText() {
+    var lines = [activeProfile().name];
+    for (var i = 1; i <= 10; i++) {
+      var left = findOccupant("bank-" + i + "-l");
+      var right = findOccupant("bank-" + i + "-r");
+      lines.push(i + ". " + (left ? left.name : "…") + " — " + (right ? right.name : "…"));
+    }
+    var drummer = findOccupant("drummer");
+    var steer = findOccupant("steer");
+    lines.push("Барабан — " + (drummer ? drummer.name : "…"));
+    lines.push("Рулевой — " + (steer ? steer.name : "…"));
+    return lines.join("\n");
+  }
+
+  function copyCrew() {
+    var text = buildCrewText();
+    var copied = function () { showCopySuccess(); };
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(copied).catch(function () {
+        copyCrewFallback(text, copied);
+      });
+    } else {
+      copyCrewFallback(text, copied);
+    }
+  }
+
+  function copyCrewFallback(text, callback) {
+    var area = document.createElement("textarea");
+    area.value = text;
+    area.style.position = "fixed";
+    area.style.left = "-9999px";
+    document.body.appendChild(area);
+    area.focus();
+    area.select();
+    try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+    area.remove();
+    callback();
+  }
+
+  function showCopySuccess() {
+    var overlay = document.getElementById("copy-success");
+    var message = overlay.querySelector(".copy-success-message");
+    var canvas = document.getElementById("copy-success-canvas");
+    var ctx = canvas.getContext("2d");
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    overlay.hidden = false;
+    overlay.classList.remove("copy-success--leaving");
+    message.classList.remove("copy-success-message--leaving");
+
+    var explosion = createExplosion(width / 2, height / 2);
+    var start = performance.now();
+    var raf;
+    function frame(now) {
+      var elapsed = now - start;
+      ctx.clearRect(0, 0, width, height);
+      drawExplosion(ctx, explosion, elapsed, 1450, width, height);
+      if (elapsed < 1700) raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+
+    // Fade the message out alongside the explosion. A separate frame ensures it is
+    // painted visibly before the transition starts.
+    requestAnimationFrame(function () {
+      message.style.setProperty("transition", "opacity 1.45s ease, transform 1.45s ease", "important");
+      message.style.setProperty("transform", "scale(0.96)", "important");
+      message.style.setProperty("opacity", "0");
+    });
+
+    window.setTimeout(function () {
+      overlay.classList.add("copy-success--leaving");
+      window.setTimeout(function () {
+        if (raf) cancelAnimationFrame(raf);
+        overlay.hidden = true;
+      }, 700);
+    }, 500);
   }
 
   function renderSeatSlot(seatDef) {
@@ -1074,7 +1163,7 @@
     ];
 
     var EXPLOSION_START = 2000;
-    var EXPLOSION_MS = 950;
+    var EXPLOSION_MS = 1950;
     var AUTO_FINISH_MS = EXPLOSION_START + EXPLOSION_MS * 0.7;
 
     var t = 0;
@@ -1129,16 +1218,21 @@
 
     function finish(immediate) {
       window.clearTimeout(timer);
-      if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
 
       if (immediate) {
+        if (raf) cancelAnimationFrame(raf);
         introEl.remove();
         revealApp();
         return;
       }
+      // Keep rendering the explosion while the intro fades out, so the fireworks
+      // disappear together with the intro instead of stopping abruptly.
       introEl.classList.add("intro--leaving");
-      introEl.addEventListener("transitionend", function () { introEl.remove(); }, { once: true });
+      introEl.addEventListener("transitionend", function () {
+        if (raf) cancelAnimationFrame(raf);
+        introEl.remove();
+      }, { once: true });
       revealApp();
     }
   }
