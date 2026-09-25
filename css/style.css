@@ -576,6 +576,17 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
   border-color: rgba(150, 110, 255, 0.45);
 }
 
+.spare-row-title {
+  position: relative;
+  z-index: 2;
+  margin-top: 22px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
 .copy-crew-btn {
   position: relative;
   z-index: 2;

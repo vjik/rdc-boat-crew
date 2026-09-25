@@ -84,12 +84,14 @@
   var activeSideModalPersonId = null;
 
   function buildSeatDefinitions() {
-    var seats = [{ id: "drummer", label: "барабан", fullLabel: "барабан" }];
+    var seats = [{ id: "drummer", label: "Барабан", fullLabel: "Барабан" }];
     for (var i = 1; i <= 10; i++) {
       seats.push({ id: "bank-" + i + "-l", bankLabel: "Банка " + i, sideWord: "Лево", fullLabel: "Банка " + i + " · лево" });
       seats.push({ id: "bank-" + i + "-r", bankLabel: "Банка " + i, sideWord: "Право", fullLabel: "Банка " + i + " · право" });
     }
-    seats.push({ id: "steer", label: "руль", fullLabel: "руль" });
+    seats.push({ id: "steer", label: "Руль", fullLabel: "Руль" });
+    seats.push({ id: "spare-1", label: "Запасной 1", fullLabel: "Запасной 1" });
+    seats.push({ id: "spare-2", label: "Запасной 2", fullLabel: "Запасной 2" });
     return seats;
   }
 
@@ -452,6 +454,17 @@
     hull.appendChild(rowsWrap);
     hull.appendChild(renderSeatSlot(findSeat("steer")));
 
+    var spareTitle = document.createElement("div");
+    spareTitle.className = "spare-row-title";
+    spareTitle.textContent = "Запасные";
+    hull.appendChild(spareTitle);
+
+    var spareRow = document.createElement("div");
+    spareRow.className = "boat-row";
+    spareRow.appendChild(renderSeatSlot(findSeat("spare-1")));
+    spareRow.appendChild(renderSeatSlot(findSeat("spare-2")));
+    hull.appendChild(spareRow);
+
     var copyBtn = document.createElement("button");
     copyBtn.type = "button";
     copyBtn.id = "copy-crew";
@@ -472,8 +485,12 @@
     }
     var drummer = findOccupant("drummer");
     var steer = findOccupant("steer");
+    var spare1 = findOccupant("spare-1");
+    var spare2 = findOccupant("spare-2");
     lines.push("Барабан — " + (drummer ? drummer.name : "…"));
     lines.push("Рулевой — " + (steer ? steer.name : "…"));
+    var spareNames = [spare1, spare2].filter(function (p) { return !!p; }).map(function (p) { return p.name; });
+    lines.push(spareNames.length ? "Запасные — " + spareNames.join(", ") : "Без запасных");
     return lines.join("\n");
   }
 
@@ -734,7 +751,7 @@
       var removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.className = "btn-remove-seat";
-      removeBtn.textContent = "Снять с банки";
+      removeBtn.textContent = "Убрать с места";
       removeBtn.addEventListener("click", function () {
         unassignPerson(occupant.id);
         renderBoat();
