@@ -568,18 +568,21 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
 
 .seat-weight { font-size: 8.5px; color: var(--text-dim); }
 
-/* drummer / steer accents */
-.boat-hull > .seat-slot:first-child .seat,
-.boat-hull > .seat-slot:last-child .seat {
-  width: 148px;
-  min-height: 62px;
-  border-color: rgba(150, 110, 255, 0.45);
+/* Spares and the copy button live outside the hull so the boat-shaped background
+   only covers the actual seating. */
+.boat-extras {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0 10px;
+  padding: 24px 0 30px;
+  border-top: 1px solid rgba(120, 220, 255, 0.08);
 }
 
 .spare-row-title {
   position: relative;
   z-index: 2;
-  margin-top: 22px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -590,7 +593,7 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
 .copy-crew-btn {
   position: relative;
   z-index: 2;
-  margin: 22px 0 0;
+  margin: 12px 0 0;
   padding: 12px 22px;
   border: 1px solid rgba(74, 227, 255, 0.4);
   border-radius: 999px;

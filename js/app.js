@@ -454,16 +454,19 @@
     hull.appendChild(rowsWrap);
     hull.appendChild(renderSeatSlot(findSeat("steer")));
 
+    var extras = document.getElementById("boat-extras");
+    extras.innerHTML = "";
+
     var spareTitle = document.createElement("div");
     spareTitle.className = "spare-row-title";
     spareTitle.textContent = "Запасные";
-    hull.appendChild(spareTitle);
+    extras.appendChild(spareTitle);
 
     var spareRow = document.createElement("div");
     spareRow.className = "boat-row";
     spareRow.appendChild(renderSeatSlot(findSeat("spare-1")));
     spareRow.appendChild(renderSeatSlot(findSeat("spare-2")));
-    hull.appendChild(spareRow);
+    extras.appendChild(spareRow);
 
     var copyBtn = document.createElement("button");
     copyBtn.type = "button";
@@ -471,7 +474,7 @@
     copyBtn.className = "copy-crew-btn";
     copyBtn.textContent = "Скопировать состав";
     copyBtn.addEventListener("click", copyCrew);
-    hull.appendChild(copyBtn);
+    extras.appendChild(copyBtn);
 
     renderWeights();
   }
