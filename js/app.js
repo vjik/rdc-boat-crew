@@ -386,7 +386,7 @@
   function computeWeights() {
     var left = 0, right = 0, total = 0;
     activePeople().forEach(function (p) {
-      if (!p.seatId) return;
+      if (!p.seatId || /^spare-/.test(p.seatId)) return;
       total += p.weight;
       if (/-l$/.test(p.seatId)) left += p.weight;
       else if (/-r$/.test(p.seatId)) right += p.weight;
