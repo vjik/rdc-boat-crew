@@ -9,6 +9,13 @@
   var WEIGHT_DIFF_FOR_FULL_TINT = 200;
   var WEIGHT_TINT_MIN_INTENSITY = 0.12;
 
+  // Hull outline as [x%, y%] points of the boat-shaped background (.boat-hull::before). Used both
+  // as its clip-path and to place the empty boat's weight at the outline's centroid.
+  var HULL_SHAPE = [
+    [50, 0], [90, 6], [100, 40], [100, 60], [90, 94],
+    [50, 100], [10, 94], [0, 60], [0, 40], [10, 6]
+  ];
+
   var STATUS_LIST = [
     { key: "approved", label: "Утверждено" },
     { key: "questioned", label: "Под вопросом" },
@@ -423,11 +430,108 @@
     var sideRight = document.getElementById("side-tint-right");
     if (sideLeft) applyTint(sideLeft, "side-tint", leftKind, intensity);
     if (sideRight) applyTint(sideRight, "side-tint", rightKind, intensity);
+
+    positionCenterOfGravity();
+  }
+
+  // Offset of el's box relative to ancestor, via the offsetParent chain (ignores CSS transforms,
+  // so seat hover/drag scaling and the app reveal animation don't skew the result).
+  function offsetWithin(el, ancestor) {
+    var x = 0, y = 0;
+    while (el && el !== ancestor) {
+      x += el.offsetLeft;
+      y += el.offsetTop;
+      el = el.offsetParent;
+    }
+    return { x: x, y: y };
+  }
+
+  function hullShapeCss() {
+    return "polygon(" + HULL_SHAPE.map(function (pt) { return pt[0] + "% " + pt[1] + "%"; }).join(", ") + ")";
+  }
+
+  // Hull outline points in px relative to the hull element, taking into account the inset of
+  // the ::before box the outline is drawn in.
+  function hullOutlinePoints(hull) {
+    var box = getComputedStyle(hull, "::before");
+    var left = parseFloat(box.left) || 0;
+    var top = parseFloat(box.top) || 0;
+    var width = hull.clientWidth - left - (parseFloat(box.right) || 0);
+    var height = hull.clientHeight - top - (parseFloat(box.bottom) || 0);
+    return HULL_SHAPE.map(function (pt) {
+      return { x: left + pt[0] / 100 * width, y: top + pt[1] / 100 * height };
+    });
+  }
+
+  // Area centroid of the outline polygon.
+  function outlineCentroid(points) {
+    var area = 0, cx = 0, cy = 0;
+    for (var i = 0; i < points.length; i++) {
+      var a = points[i];
+      var b = points[(i + 1) % points.length];
+      var cross = a.x * b.y - b.x * a.y;
+      area += cross;
+      cx += (a.x + b.x) * cross;
+      cy += (a.y + b.y) * cross;
+    }
+    return { x: cx / (3 * area), y: cy / (3 * area) };
+  }
+
+  // Leftmost and rightmost x where a horizontal line at y crosses the outline (the gunwales at
+  // that point along the boat), or null if y is outside the outline.
+  function outlineEdgesAt(points, y) {
+    var minX = Infinity, maxX = -Infinity;
+    for (var i = 0; i < points.length; i++) {
+      var a = points[i];
+      var b = points[(i + 1) % points.length];
+      if ((y < a.y && y < b.y) || (y > a.y && y > b.y)) continue;
+      var x = a.y === b.y ? Math.min(a.x, b.x) : a.x + (y - a.y) / (b.y - a.y) * (b.x - a.x);
+      var x2 = a.y === b.y ? Math.max(a.x, b.x) : x;
+      if (x < minX) minX = x;
+      if (x2 > maxX) maxX = x2;
+    }
+    return minX <= maxX ? { left: minX, right: maxX } : null;
+  }
+
+  // Places the center-of-gravity marker on the hull. The empty boat's weight sits at the
+  // outline's centroid. Each seated person sits at their seat's position along the boat and,
+  // across it, at the gunwale of their side (the outline's edge at that point) — drummer and
+  // steer sit on the centerline. Using the outline rather than the on-screen seat position keeps
+  // the lateral lever arm true to the boat's width. Spares are ignored.
+  function positionCenterOfGravity() {
+    var hull = document.getElementById("boat-hull");
+    var marker = document.getElementById("boat-cog");
+    if (!hull || !marker || !hull.clientWidth) return;
+
+    var points = hullOutlinePoints(hull);
+    var boatCenter = outlineCentroid(points);
+    var totalWeight = EMPTY_BOAT_WEIGHT;
+    var sumX = boatCenter.x * EMPTY_BOAT_WEIGHT;
+    var sumY = boatCenter.y * EMPTY_BOAT_WEIGHT;
+
+    activePeople().forEach(function (p) {
+      if (!p.seatId || /^spare-/.test(p.seatId) || !p.weight) return;
+      var seatEl = hull.querySelector('.seat[data-seat-id="' + p.seatId + '"]');
+      if (!seatEl) return;
+      var y = offsetWithin(seatEl, hull).y + seatEl.offsetHeight / 2;
+      var edges = outlineEdgesAt(points, y);
+      var x = boatCenter.x;
+      var side = getSeatSide(p.seatId);
+      if (edges && side === "l") x = edges.left;
+      else if (edges && side === "r") x = edges.right;
+      sumX += x * p.weight;
+      sumY += y * p.weight;
+      totalWeight += p.weight;
+    });
+
+    marker.style.left = (sumX / totalWeight) + "px";
+    marker.style.top = (sumY / totalWeight) + "px";
   }
 
   function renderBoat() {
     var hull = document.getElementById("boat-hull");
     hull.innerHTML = "";
+    hull.style.setProperty("--hull-shape", hullShapeCss());
 
     var sideLeft = document.createElement("div");
     sideLeft.id = "side-tint-left";
@@ -453,6 +557,13 @@
     }
     hull.appendChild(rowsWrap);
     hull.appendChild(renderSeatSlot(findSeat("steer")));
+
+    var cog = document.createElement("div");
+    cog.id = "boat-cog";
+    cog.className = "boat-cog";
+    cog.title = "Центр тяжести";
+    cog.setAttribute("aria-hidden", "true");
+    hull.appendChild(cog);
 
     var extras = document.getElementById("boat-extras");
     extras.innerHTML = "";
@@ -1372,6 +1483,13 @@
       if (!document.getElementById("people-modal").hidden) closePeopleModal();
       if (!document.getElementById("profile-modal").hidden) closeProfileModal();
     });
+
+    // Seat positions change with layout (app reveal, viewport resize), so keep the marker in sync.
+    if (window.ResizeObserver) {
+      new ResizeObserver(positionCenterOfGravity).observe(document.getElementById("boat-hull"));
+    } else {
+      window.addEventListener("resize", positionCenterOfGravity);
+    }
 
     initIntro();
     registerServiceWorker();

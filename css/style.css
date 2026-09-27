@@ -327,6 +327,7 @@ body {
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 6px currentColor; }
 .dot--approved { background: var(--approved); color: var(--approved); }
 .dot--questioned { background: var(--questioned); color: var(--questioned); }
+.dot--cog { background: transparent; border: 1.5px solid var(--violet); color: var(--violet); }
 
 /* ===== Weight bar ===== */
 .weight-bar {
@@ -414,7 +415,8 @@ body {
     radial-gradient(ellipse 80% 40% at 50% 8%, rgba(74, 227, 255, 0.16), transparent 60%),
     linear-gradient(180deg, #0d2438 0%, #081726 55%, #05101c 100%);
   border: none;
-  clip-path: polygon(50% 0%, 90% 6%, 100% 40%, 100% 60%, 90% 94%, 50% 100%, 10% 94%, 0% 60%, 0% 40%, 10% 6%);
+  /* Set from HULL_SHAPE in js/app.js, which also uses it for the center of gravity. */
+  clip-path: var(--hull-shape);
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35), 0 0 30px rgba(74, 227, 255, 0.06);
 }
 
@@ -567,6 +569,24 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
 }
 
 .seat-weight { font-size: 8.5px; color: var(--text-dim); }
+
+/* Center-of-gravity marker, positioned in px by positionCenterOfGravity(). */
+.boat-cog {
+  position: absolute;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border: 2px solid var(--violet);
+  border-radius: 50%;
+  background:
+    linear-gradient(var(--violet), var(--violet)) center / 2px 100% no-repeat,
+    linear-gradient(var(--violet), var(--violet)) center / 100% 2px no-repeat,
+    rgba(4, 11, 20, 0.6);
+  box-shadow: 0 0 14px rgba(150, 110, 254, 0.7);
+  pointer-events: none;
+  transition: left 0.3s ease, top 0.3s ease;
+}
 
 /* Spares and the copy button live outside the hull so the boat-shaped background
    only covers the actual seating. */
