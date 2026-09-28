@@ -1,4 +1,4 @@
-var CACHE_NAME = "rdc-boat-crew-v12";
+var CACHE_NAME = "rdc-boat-crew-v13";
 var ASSETS = [
   "./",
   "./index.html",

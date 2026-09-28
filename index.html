@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Экипаж">
 
-<link rel="stylesheet" href="css/style.css?11">
+<link rel="stylesheet" href="css/style.css?12">
 </head>
 <body>
 
@@ -51,13 +51,6 @@
   <main class="app-body">
 
     <section class="pane boat-pane" aria-label="Схема лодки">
-      <div class="pane-header">
-        <div class="legend">
-          <span class="legend-item"><i class="dot dot--approved" aria-hidden="true"></i>Утверждено</span>
-          <span class="legend-item"><i class="dot dot--questioned" aria-hidden="true"></i>Под вопросом</span>
-          <span class="legend-item"><i class="dot dot--cog" aria-hidden="true"></i>Центр тяжести</span>
-        </div>
-      </div>
       <div class="weight-bar" id="weight-bar">
         <div class="weight-item weight-item--left" id="weight-left">
           <span class="weight-label">Лево</span>
@@ -70,6 +63,18 @@
         <div class="weight-item weight-item--right" id="weight-right">
           <span class="weight-label">Право</span>
           <span class="weight-value" id="weight-right-value">0 кг</span>
+        </div>
+        <div class="weight-item weight-item--bow" id="weight-bow">
+          <span class="weight-label">Нос</span>
+          <span class="weight-value" id="weight-bow-value">0 кг</span>
+        </div>
+        <div class="weight-item weight-item--trim">
+          <span class="weight-label">Разница</span>
+          <span class="weight-value" id="weight-trim-value">0 кг</span>
+        </div>
+        <div class="weight-item weight-item--stern" id="weight-stern">
+          <span class="weight-label">Корма</span>
+          <span class="weight-value" id="weight-stern-value">0 кг</span>
         </div>
       </div>
       <div class="boat-scroll">
@@ -178,6 +183,6 @@
   </div>
 </div>
 
-<script src="js/app.js?15"></script>
+<script src="js/app.js?16"></script>
 </body>
 </html>

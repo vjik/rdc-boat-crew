@@ -8,6 +8,9 @@
   var EMPTY_BOAT_WEIGHT = 250;
   var WEIGHT_DIFF_FOR_FULL_TINT = 200;
   var WEIGHT_TINT_MIN_INTENSITY = 0.12;
+  // Bow/stern loads come from lever arms, so their difference is smaller than the plain
+  // left/right sums and needs a lower threshold for a full tint.
+  var TRIM_DIFF_FOR_FULL_TINT = 100;
 
   // Hull outline as [x%, y%] points of the boat-shaped background (.boat-hull::before). Used both
   // as its clip-path and to place the empty boat's weight at the outline's centroid.
@@ -411,27 +414,46 @@
     }
   }
 
+  function tintIntensity(diff, diffForFullTint) {
+    if (diff === 0) return 0;
+    var ratio = Math.min(Math.abs(diff), diffForFullTint) / diffForFullTint;
+    return WEIGHT_TINT_MIN_INTENSITY + ratio * (1 - WEIGHT_TINT_MIN_INTENSITY);
+  }
+
+  // Tints a pair of opposing weight cells and hull zones: the heavier one red, the lighter cyan.
+  function applyPairTint(firstCellId, secondCellId, firstZoneId, secondZoneId, diff, diffForFullTint) {
+    var intensity = tintIntensity(diff, diffForFullTint);
+    var firstKind = diff > 0 ? "heavy" : (diff < 0 ? "light" : null);
+    var secondKind = diff < 0 ? "heavy" : (diff > 0 ? "light" : null);
+
+    applyTint(document.getElementById(firstCellId), "weight-item", firstKind, intensity);
+    applyTint(document.getElementById(secondCellId), "weight-item", secondKind, intensity);
+
+    var firstZone = document.getElementById(firstZoneId);
+    var secondZone = document.getElementById(secondZoneId);
+    if (firstZone) applyTint(firstZone, "hull-tint", firstKind, intensity);
+    if (secondZone) applyTint(secondZone, "hull-tint", secondKind, intensity);
+  }
+
   function renderWeights() {
     var w = computeWeights();
     document.getElementById("weight-left-value").textContent = w.left + " кг";
     document.getElementById("weight-right-value").textContent = w.right + " кг";
     document.getElementById("weight-total-value").textContent = w.total + " кг";
 
-    var diff = w.left - w.right;
-    var ratio = Math.min(Math.abs(diff), WEIGHT_DIFF_FOR_FULL_TINT) / WEIGHT_DIFF_FOR_FULL_TINT;
-    var intensity = diff === 0 ? 0 : WEIGHT_TINT_MIN_INTENSITY + ratio * (1 - WEIGHT_TINT_MIN_INTENSITY);
-    var leftKind = diff > 0 ? "heavy" : (diff < 0 ? "light" : null);
-    var rightKind = diff < 0 ? "heavy" : (diff > 0 ? "light" : null);
+    applyPairTint("weight-left", "weight-right", "hull-tint-left", "hull-tint-right", w.left - w.right, WEIGHT_DIFF_FOR_FULL_TINT);
 
-    applyTint(document.getElementById("weight-left"), "weight-item", leftKind, intensity);
-    applyTint(document.getElementById("weight-right"), "weight-item", rightKind, intensity);
+    renderCenterOfGravity();
+  }
 
-    var sideLeft = document.getElementById("side-tint-left");
-    var sideRight = document.getElementById("side-tint-right");
-    if (sideLeft) applyTint(sideLeft, "side-tint", leftKind, intensity);
-    if (sideRight) applyTint(sideRight, "side-tint", rightKind, intensity);
+  function renderTrim(bow, stern) {
+    document.getElementById("weight-bow-value").textContent = bow + " кг";
+    document.getElementById("weight-stern-value").textContent = stern + " кг";
+    var diff = bow - stern;
+    document.getElementById("weight-trim-value").textContent =
+      diff > 0 ? "Нос +" + diff + " кг" : (diff < 0 ? "Корма +" + (-diff) + " кг" : "0 кг");
 
-    positionCenterOfGravity();
+    applyPairTint("weight-bow", "weight-stern", "hull-tint-bow", "hull-tint-stern", diff, TRIM_DIFF_FOR_FULL_TINT);
   }
 
   // Offset of el's box relative to ancestor, via the offsetParent chain (ignores CSS transforms,
@@ -498,12 +520,18 @@
   // across it, at the gunwale of their side (the outline's edge at that point) — drummer and
   // steer sit on the centerline. Using the outline rather than the on-screen seat position keeps
   // the lateral lever arm true to the boat's width. Spares are ignored.
-  function positionCenterOfGravity() {
+  //
+  // The same center of gravity gives the bow/stern loads: the boat is treated as a beam resting
+  // on its bow and stern ends, so each end carries the total weight in proportion to how close
+  // the center of gravity is to it.
+  function renderCenterOfGravity() {
     var hull = document.getElementById("boat-hull");
     var marker = document.getElementById("boat-cog");
     if (!hull || !marker || !hull.clientWidth) return;
 
     var points = hullOutlinePoints(hull);
+    var bowY = Math.min.apply(null, points.map(function (pt) { return pt.y; }));
+    var sternY = Math.max.apply(null, points.map(function (pt) { return pt.y; }));
     var boatCenter = outlineCentroid(points);
     var totalWeight = EMPTY_BOAT_WEIGHT;
     var sumX = boatCenter.x * EMPTY_BOAT_WEIGHT;
@@ -524,8 +552,12 @@
       totalWeight += p.weight;
     });
 
+    var cogY = sumY / totalWeight;
     marker.style.left = (sumX / totalWeight) + "px";
-    marker.style.top = (sumY / totalWeight) + "px";
+    marker.style.top = cogY + "px";
+
+    var bow = Math.round(totalWeight * (sternY - cogY) / (sternY - bowY));
+    renderTrim(bow, totalWeight - bow);
   }
 
   function renderBoat() {
@@ -533,15 +565,12 @@
     hull.innerHTML = "";
     hull.style.setProperty("--hull-shape", hullShapeCss());
 
-    var sideLeft = document.createElement("div");
-    sideLeft.id = "side-tint-left";
-    sideLeft.className = "side-tint side-tint--left";
-    hull.appendChild(sideLeft);
-
-    var sideRight = document.createElement("div");
-    sideRight.id = "side-tint-right";
-    sideRight.className = "side-tint side-tint--right";
-    hull.appendChild(sideRight);
+    ["left", "right", "bow", "stern"].forEach(function (zone) {
+      var tint = document.createElement("div");
+      tint.id = "hull-tint-" + zone;
+      tint.className = "hull-tint hull-tint--" + zone;
+      hull.appendChild(tint);
+    });
 
     hull.appendChild(renderSeatSlot(findSeat("drummer")));
 
@@ -1484,11 +1513,12 @@
       if (!document.getElementById("profile-modal").hidden) closeProfileModal();
     });
 
-    // Seat positions change with layout (app reveal, viewport resize), so keep the marker in sync.
+    // Seat positions change with layout (app reveal, viewport resize), so keep the marker and
+    // the bow/stern loads in sync.
     if (window.ResizeObserver) {
-      new ResizeObserver(positionCenterOfGravity).observe(document.getElementById("boat-hull"));
+      new ResizeObserver(renderCenterOfGravity).observe(document.getElementById("boat-hull"));
     } else {
-      window.addEventListener("resize", positionCenterOfGravity);
+      window.addEventListener("resize", renderCenterOfGravity);
     }
 
     initIntro();

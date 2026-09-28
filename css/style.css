@@ -311,40 +311,21 @@ body {
   .boat-pane { max-width: 480px; }
 }
 
-.pane-header {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px 14px 8px;
-  border-bottom: 1px solid rgba(120, 220, 255, 0.08);
-}
-
-.legend { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-.legend-item { display: flex; align-items: center; gap: 4px; font-size: 10.5px; color: var(--text-dim); }
-
-.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 6px currentColor; }
-.dot--approved { background: var(--approved); color: var(--approved); }
-.dot--questioned { background: var(--questioned); color: var(--questioned); }
-.dot--cog { background: transparent; border: 1.5px solid var(--violet); color: var(--violet); }
-
 /* ===== Weight bar ===== */
 .weight-bar {
   flex: 0 0 auto;
-  display: flex;
-  gap: 8px;
-  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 7px 10px;
   border-bottom: 1px solid rgba(120, 220, 255, 0.08);
 }
 
 .weight-item {
-  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 7px 6px;
+  padding: 3px 4px;
   border-radius: var(--radius-sm);
   border: 1.5px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.03);
@@ -354,13 +335,19 @@ body {
 .weight-item--total { border-color: var(--panel-border); }
 
 .weight-label {
-  font-size: 9.5px;
+  font-size: 9px;
+  line-height: 11px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
 
-.weight-value { font-size: 14px; font-weight: 700; color: var(--text-main); }
+.weight-value { font-size: 13.5px; line-height: 17px; font-weight: 700; color: var(--text-main); white-space: nowrap; }
+
+/* "Корма +120 кг" is longer than a plain weight, so it gets a smaller font and less side
+   padding to fit narrow phones. */
+.weight-item--trim { padding-left: 2px; padding-right: 2px; }
+.weight-item--trim .weight-value { font-size: 11.5px; }
 
 .weight-item--heavy {
   --tint-color: 255, 90, 110;
@@ -428,23 +415,22 @@ body {
   width: 100%;
 }
 
-.side-tint {
+/* Heavy/light tint of a boat half (left/right side, bow/stern end), fading from its outer edge
+   towards the middle of the boat. */
+.hull-tint {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 50%;
   z-index: 0;
   pointer-events: none;
   transition: background 0.3s ease;
 }
 
-.side-tint--left { left: 0; }
-.side-tint--right { right: 0; }
+.hull-tint--left { top: 0; bottom: 0; left: 0; width: 50%; --tint-dir: 90deg; }
+.hull-tint--right { top: 0; bottom: 0; right: 0; width: 50%; --tint-dir: 270deg; }
+.hull-tint--bow { left: 0; right: 0; top: 0; height: 50%; --tint-dir: 180deg; }
+.hull-tint--stern { left: 0; right: 0; bottom: 0; height: 50%; --tint-dir: 0deg; }
 
-.side-tint--heavy { background: linear-gradient(90deg, rgba(255, 90, 110, calc(var(--tint-alpha, 0) * 0.32)), transparent); }
-.side-tint--right.side-tint--heavy { background: linear-gradient(270deg, rgba(255, 90, 110, calc(var(--tint-alpha, 0) * 0.32)), transparent); }
-.side-tint--light { background: linear-gradient(90deg, rgba(74, 227, 255, calc(var(--tint-alpha, 0) * 0.24)), transparent); }
-.side-tint--right.side-tint--light { background: linear-gradient(270deg, rgba(74, 227, 255, calc(var(--tint-alpha, 0) * 0.24)), transparent); }
+.hull-tint--heavy { background: linear-gradient(var(--tint-dir), rgba(255, 90, 110, calc(var(--tint-alpha, 0) * 0.32)), transparent); }
+.hull-tint--light { background: linear-gradient(var(--tint-dir), rgba(74, 227, 255, calc(var(--tint-alpha, 0) * 0.24)), transparent); }
 
 .boat-row {
   position: relative;
@@ -570,7 +556,7 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
 
 .seat-weight { font-size: 8.5px; color: var(--text-dim); }
 
-/* Center-of-gravity marker, positioned in px by positionCenterOfGravity(). */
+/* Center-of-gravity marker, positioned in px by renderCenterOfGravity(). */
 .boat-cog {
   position: absolute;
   z-index: 3;
