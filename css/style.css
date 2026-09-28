@@ -485,16 +485,13 @@ body {
   height: 100%;
   width: calc(50% * var(--tint-alpha, 0));
   border-radius: 2px;
-  background: rgba(255, 90, 110, calc(0.4 + var(--tint-alpha, 0) * 0.6));
+  background: hsl(var(--balance-hue, 0), 100%, 65%);
 }
 
 .bank-balance--heavy-l .bank-balance-bar { right: 50%; }
 .bank-balance--heavy-r .bank-balance-bar { left: 50%; }
 
-.bank-balance--heavy-l .bank-balance-value,
-.bank-balance--heavy-r .bank-balance-value { color: rgba(255, 90, 110, calc(0.55 + var(--tint-alpha, 0) * 0.45)); }
-
-.bank-balance--even .bank-balance-value { color: var(--approved); }
+.bank-balance .bank-balance-value { color: hsl(var(--balance-hue, 0), 100%, 65%); }
 .bank-balance--empty .bank-balance-value { color: var(--text-dim); opacity: 0.6; }
 
 .seat-slot {

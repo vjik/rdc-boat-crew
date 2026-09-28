@@ -13,6 +13,8 @@
   var TRIM_DIFF_FOR_FULL_TINT = 100;
   // Left/right difference within a single bank at which its balance bar reaches full length.
   var BANK_DIFF_FOR_FULL_TINT = 20;
+  // HSL hue of a balanced bank; it fades to 0 (red) as the difference grows.
+  var BANK_BALANCE_HUE_EVEN = 130;
 
   // Hull outline as [x%, y%] points of the boat-shaped background (.boat-hull::before). Used both
   // as its clip-path and to place the empty boat's weight at the outline's centroid.
@@ -647,8 +649,11 @@
     track.appendChild(bar);
     el.appendChild(track);
 
+    // Color goes from green (balanced) through yellow to red at BANK_DIFF_FOR_FULL_TINT.
+    var ratio = Math.min(Math.abs(diff), BANK_DIFF_FOR_FULL_TINT) / BANK_DIFF_FOR_FULL_TINT;
+    el.style.setProperty("--balance-hue", Math.round(BANK_BALANCE_HUE_EVEN * (1 - ratio)));
+
     if (diff === 0) {
-      el.classList.add("bank-balance--even");
       el.title = "Банка " + bankIdx + ": " + (left || right ? "баланс" : "пусто");
     } else {
       var side = diff > 0 ? "l" : "r";
