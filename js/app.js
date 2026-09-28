@@ -203,7 +203,7 @@
       var source = findProfile(importFromProfileId);
       if (source) {
         peopleList = source.people.map(function (p) {
-          return { id: makePersonId(), name: p.name, weight: p.weight, side: p.side || null, seatId: null, status: null };
+          return { id: makePersonId(), name: p.name, weight: p.weight, side: p.side || null, seatId: p.seatId || null, status: p.status || null };
         });
       }
     }
