@@ -11,6 +11,8 @@
   // Bow/stern loads come from lever arms, so their difference is smaller than the plain
   // left/right sums and needs a lower threshold for a full tint.
   var TRIM_DIFF_FOR_FULL_TINT = 100;
+  // Left/right difference within a single bank at which its balance bar reaches full length.
+  var BANK_DIFF_FOR_FULL_TINT = 20;
 
   // Hull outline as [x%, y%] points of the boat-shaped background (.boat-hull::before). Used both
   // as its clip-path and to place the empty boat's weight at the outline's centroid.
@@ -579,8 +581,9 @@
 
     for (var i = 1; i <= 10; i++) {
       var rowEl = document.createElement("div");
-      rowEl.className = "boat-row";
+      rowEl.className = "boat-row boat-row--bank";
       rowEl.appendChild(renderSeatSlot(findSeat("bank-" + i + "-l")));
+      rowEl.appendChild(renderBankBalance(i));
       rowEl.appendChild(renderSeatSlot(findSeat("bank-" + i + "-r")));
       rowsWrap.appendChild(rowEl);
     }
@@ -617,6 +620,44 @@
     extras.appendChild(copyBtn);
 
     renderWeights();
+  }
+
+  // Balance indicator between the two seats of a bank: the left/right weight difference and a bar
+  // growing from the centerline towards the heavier side. An empty seat counts as 0 kg.
+  function renderBankBalance(bankIdx) {
+    var el = document.createElement("div");
+    el.className = "bank-balance";
+    el.setAttribute("aria-hidden", "true");
+
+    var left = findOccupant("bank-" + bankIdx + "-l");
+    var right = findOccupant("bank-" + bankIdx + "-r");
+    if (!left && !right) el.classList.add("bank-balance--empty");
+
+    var diff = (left ? left.weight : 0) - (right ? right.weight : 0);
+
+    var value = document.createElement("span");
+    value.className = "bank-balance-value";
+    value.textContent = Math.abs(diff);
+    el.appendChild(value);
+
+    var track = document.createElement("span");
+    track.className = "bank-balance-track";
+    var bar = document.createElement("span");
+    bar.className = "bank-balance-bar";
+    track.appendChild(bar);
+    el.appendChild(track);
+
+    if (diff === 0) {
+      el.classList.add("bank-balance--even");
+      el.title = "Банка " + bankIdx + ": " + (left || right ? "баланс" : "пусто");
+    } else {
+      var side = diff > 0 ? "l" : "r";
+      el.classList.add("bank-balance--heavy-" + side);
+      el.style.setProperty("--tint-alpha", tintIntensity(diff, BANK_DIFF_FOR_FULL_TINT).toFixed(2));
+      el.title = "Банка " + bankIdx + ": " + SIDE_FULL_LABELS[side] + " борт тяжелее на " + Math.abs(diff) + " кг";
+    }
+
+    return el;
   }
 
   function buildCrewText() {

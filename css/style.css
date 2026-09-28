@@ -441,6 +441,62 @@ body {
   gap: 12px;
 }
 
+/* Bank rows put the balance indicator in the gap between the seats instead of a plain gap. */
+.boat-row--bank { gap: 0; }
+
+.bank-balance {
+  flex: 0 0 30px;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.bank-balance-value {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-dim);
+}
+
+.bank-balance-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+}
+
+/* Boat centerline tick the bar grows from. */
+.bank-balance-track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  margin-left: -0.5px;
+  background: rgba(234, 246, 255, 0.3);
+}
+
+.bank-balance-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: calc(50% * var(--tint-alpha, 0));
+  border-radius: 2px;
+  background: rgba(255, 90, 110, calc(0.4 + var(--tint-alpha, 0) * 0.6));
+}
+
+.bank-balance--heavy-l .bank-balance-bar { right: 50%; }
+.bank-balance--heavy-r .bank-balance-bar { left: 50%; }
+
+.bank-balance--heavy-l .bank-balance-value,
+.bank-balance--heavy-r .bank-balance-value { color: rgba(255, 90, 110, calc(0.55 + var(--tint-alpha, 0) * 0.45)); }
+
+.bank-balance--even .bank-balance-value { color: var(--approved); }
+.bank-balance--empty .bank-balance-value { color: var(--text-dim); opacity: 0.6; }
+
 .seat-slot {
   position: relative;
   z-index: 1;
@@ -468,7 +524,7 @@ body {
 
 .seat {
   position: relative;
-  width: 116px;
+  width: 110px;
   min-height: 58px;
   border-radius: 14px;
   display: flex;
