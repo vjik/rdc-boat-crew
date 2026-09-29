@@ -623,6 +623,7 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
     linear-gradient(var(--violet), var(--violet)) center / 100% 2px no-repeat,
     rgba(4, 11, 20, 0.6);
   box-shadow: 0 0 14px rgba(150, 110, 254, 0.7);
+  opacity: 0.3;
   pointer-events: none;
   transition: left 0.3s ease, top 0.3s ease;
 }
