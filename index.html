@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Экипаж">
 
-<link rel="stylesheet" href="css/style.css?14">
+<link rel="stylesheet" href="css/style.css?15">
 </head>
 <body>
 
@@ -164,6 +164,8 @@
 
     <div class="profile-create">
       <input type="text" id="profile-new-name" name="profile-new-name" class="profile-new-name" placeholder="Название нового профиля" maxlength="60" autocomplete="off" aria-label="Название нового профиля">
+      <label for="profile-boat-type" class="profile-import-label">Тип лодки</label>
+      <select id="profile-boat-type" name="profile-boat-type" class="profile-import-select"></select>
       <label for="profile-import-from" class="profile-import-label">Импортировать данные из профиля</label>
       <select id="profile-import-from" name="profile-import-from" class="profile-import-select"></select>
       <button id="profile-create-btn" class="profile-create-submit" type="button">Создать профиль</button>
@@ -183,6 +185,6 @@
   </div>
 </div>
 
-<script src="js/app.js?18"></script>
+<script src="js/app.js?19"></script>
 </body>
 </html>

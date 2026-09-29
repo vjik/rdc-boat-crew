@@ -16,6 +16,16 @@
   // HSL hue of a balanced bank; it fades to 0 (red) as the difference grows.
   var BANK_BALANCE_HUE_EVEN = 130;
 
+  // Boat types a profile can be created with. The type is fixed at creation; profiles saved
+  // before types existed have no `boatType` and are treated as DEFAULT_BOAT_TYPE.
+  var BOAT_TYPES = {
+    d20: { label: "Д-20", bankCount: 10 },
+    d10: { label: "Д-10", bankCount: 5 }
+  };
+  var BOAT_TYPE_ORDER = ["d20", "d10"];
+  var DEFAULT_BOAT_TYPE = "d20";
+  var MAX_BANK_COUNT = 10;
+
   // Hull outline as [x%, y%] points of the boat-shaped background (.boat-hull::before). Used both
   // as its clip-path and to place the empty boat's weight at the outline's centroid.
   var HULL_SHAPE = [
@@ -99,7 +109,7 @@
 
   function buildSeatDefinitions() {
     var seats = [{ id: "drummer", label: "Барабан", fullLabel: "Барабан" }];
-    for (var i = 1; i <= 10; i++) {
+    for (var i = 1; i <= MAX_BANK_COUNT; i++) {
       seats.push({ id: "bank-" + i + "-l", bankLabel: "Банка " + i, sideWord: "Лево", fullLabel: "Банка " + i + " · лево" });
       seats.push({ id: "bank-" + i + "-r", bankLabel: "Банка " + i, sideWord: "Право", fullLabel: "Банка " + i + " · право" });
     }
@@ -144,8 +154,12 @@
     return "profile-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
   }
 
-  function createProfile(name, peopleList) {
-    return { id: makeProfileId(), name: name, people: peopleList || [] };
+  function createProfile(name, peopleList, boatType) {
+    return { id: makeProfileId(), name: name, boatType: boatType || DEFAULT_BOAT_TYPE, people: peopleList || [] };
+  }
+
+  function profileBoatType(profile) {
+    return BOAT_TYPES[profile.boatType] || BOAT_TYPES[DEFAULT_BOAT_TYPE];
   }
 
   function buildInitialState() {
@@ -204,17 +218,25 @@
     return activeProfile().people;
   }
 
-  function addProfile(name, importFromProfileId) {
+  function activeBankCount() {
+    return profileBoatType(activeProfile()).bankCount;
+  }
+
+  function addProfile(name, boatType, importFromProfileId) {
+    var bankCount = (BOAT_TYPES[boatType] || BOAT_TYPES[DEFAULT_BOAT_TYPE]).bankCount;
     var peopleList = [];
     if (importFromProfileId) {
       var source = findProfile(importFromProfileId);
       if (source) {
         peopleList = source.people.map(function (p) {
-          return { id: makePersonId(), name: p.name, weight: p.weight, side: p.side || null, seatId: p.seatId || null, status: p.status || null };
+          // Seats on banks the new boat doesn't have are dropped; the person stays unseated.
+          var bankIdx = p.seatId ? parseBankNumber(p.seatId) : null;
+          var seatId = bankIdx !== null && bankIdx > bankCount ? null : (p.seatId || null);
+          return { id: makePersonId(), name: p.name, weight: p.weight, side: p.side || null, seatId: seatId, status: seatId ? (p.status || null) : null };
         });
       }
     }
-    var profile = createProfile(name, peopleList);
+    var profile = createProfile(name, peopleList, boatType);
     state.profiles.push(profile);
     state.activeProfileId = profile.id;
     saveState();
@@ -320,11 +342,12 @@
 
   // Nearest empty bank seat index on `side` around `aroundIdx` (ties broken towards bank 1).
   function findNearestEmptyBankIdx(side, aroundIdx) {
-    for (var d = 1; d <= 10; d++) {
+    var bankCount = activeBankCount();
+    for (var d = 1; d <= bankCount; d++) {
       var down = aroundIdx - d;
       if (down >= 1 && !findOccupant("bank-" + down + "-" + side)) return down;
       var up = aroundIdx + d;
-      if (up <= 10 && !findOccupant("bank-" + up + "-" + side)) return up;
+      if (up <= bankCount && !findOccupant("bank-" + up + "-" + side)) return up;
     }
     return null;
   }
@@ -581,7 +604,8 @@
     var rowsWrap = document.createElement("div");
     rowsWrap.className = "boat-rows";
 
-    for (var i = 1; i <= 10; i++) {
+    var bankCount = activeBankCount();
+    for (var i = 1; i <= bankCount; i++) {
       var rowEl = document.createElement("div");
       rowEl.className = "boat-row boat-row--bank";
       rowEl.appendChild(renderSeatSlot(findSeat("bank-" + i + "-l")));
@@ -667,7 +691,8 @@
 
   function buildCrewText() {
     var lines = [activeProfile().name];
-    for (var i = 1; i <= 10; i++) {
+    var bankCount = activeBankCount();
+    for (var i = 1; i <= bankCount; i++) {
       var left = findOccupant("bank-" + i + "-l");
       var right = findOccupant("bank-" + i + "-r");
       lines.push(i + ". " + (left ? left.name : "…") + " — " + (right ? right.name : "…"));
@@ -1035,8 +1060,21 @@
     });
   }
 
+  function renderProfileBoatTypeSelect() {
+    var select = document.getElementById("profile-boat-type");
+    select.innerHTML = "";
+    BOAT_TYPE_ORDER.forEach(function (key) {
+      var opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = BOAT_TYPES[key].label;
+      select.appendChild(opt);
+    });
+    select.value = DEFAULT_BOAT_TYPE;
+  }
+
   function openProfileCreateModal() {
     document.getElementById("profile-new-name").value = "";
+    renderProfileBoatTypeSelect();
     renderProfileImportSelect();
     document.getElementById("profile-create-modal").hidden = false;
     document.getElementById("profile-new-name").focus();
@@ -1064,6 +1102,12 @@
       if (profile.id === state.activeProfileId) renderProfileButton();
     });
     row.appendChild(nameInput);
+
+    var boatTypeTag = document.createElement("span");
+    boatTypeTag.className = "profile-boat-type";
+    boatTypeTag.textContent = profileBoatType(profile).label;
+    boatTypeTag.title = "Тип лодки";
+    row.appendChild(boatTypeTag);
 
     if (profile.id === state.activeProfileId) {
       var badge = document.createElement("span");
@@ -1543,7 +1587,8 @@
       var name = nameInput.value.trim();
       if (!name) { nameInput.focus(); return; }
       var importFromId = document.getElementById("profile-import-from").value || null;
-      addProfile(name, importFromId);
+      var boatType = document.getElementById("profile-boat-type").value;
+      addProfile(name, boatType, importFromId);
       closeProfileCreateModal();
       renderProfileButton();
       renderBoat();
