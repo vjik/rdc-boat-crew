@@ -637,13 +637,26 @@
     spareRow.appendChild(renderSeatSlot(findSeat("spare-2")));
     extras.appendChild(spareRow);
 
+    var copyActions = document.createElement("div");
+    copyActions.className = "copy-crew-actions";
+
     var copyBtn = document.createElement("button");
     copyBtn.type = "button";
     copyBtn.id = "copy-crew";
     copyBtn.className = "copy-crew-btn";
     copyBtn.textContent = "Скопировать состав";
-    copyBtn.addEventListener("click", copyCrew);
-    extras.appendChild(copyBtn);
+    copyBtn.addEventListener("click", function () { copyCrew(false); });
+    copyActions.appendChild(copyBtn);
+
+    var copyWeightBtn = document.createElement("button");
+    copyWeightBtn.type = "button";
+    copyWeightBtn.id = "copy-crew-weight";
+    copyWeightBtn.className = "copy-crew-btn";
+    copyWeightBtn.textContent = "Скопировать с весом";
+    copyWeightBtn.addEventListener("click", function () { copyCrew(true); });
+    copyActions.appendChild(copyWeightBtn);
+
+    extras.appendChild(copyActions);
 
     renderWeights();
   }
@@ -689,27 +702,31 @@
     return el;
   }
 
-  function buildCrewText() {
+  function buildCrewText(withWeight) {
+    var label = function (p) {
+      if (!p) return "…";
+      return withWeight && p.weight ? p.name + " (" + p.weight + " кг)" : p.name;
+    };
     var lines = [activeProfile().name];
     var bankCount = activeBankCount();
     for (var i = 1; i <= bankCount; i++) {
       var left = findOccupant("bank-" + i + "-l");
       var right = findOccupant("bank-" + i + "-r");
-      lines.push(i + ". " + (left ? left.name : "…") + " — " + (right ? right.name : "…"));
+      lines.push(i + ". " + label(left) + " — " + label(right));
     }
     var drummer = findOccupant("drummer");
     var steer = findOccupant("steer");
     var spare1 = findOccupant("spare-1");
     var spare2 = findOccupant("spare-2");
-    lines.push("Барабан — " + (drummer ? drummer.name : "…"));
-    lines.push("Рулевой — " + (steer ? steer.name : "…"));
-    var spareNames = [spare1, spare2].filter(function (p) { return !!p; }).map(function (p) { return p.name; });
+    lines.push("Барабан — " + label(drummer));
+    lines.push("Рулевой — " + label(steer));
+    var spareNames = [spare1, spare2].filter(function (p) { return !!p; }).map(label);
     lines.push(spareNames.length ? "Запасные — " + spareNames.join(", ") : "Без запасных");
     return lines.join("\n");
   }
 
-  function copyCrew() {
-    var text = buildCrewText();
+  function copyCrew(withWeight) {
+    var text = buildCrewText(withWeight);
     var copied = function () { showCopySuccess(); };
 
     if (navigator.clipboard && window.isSecureContext) {

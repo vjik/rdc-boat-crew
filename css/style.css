@@ -650,10 +650,17 @@ body.is-dragging { user-select: none; -webkit-user-select: none; cursor: grabbin
   color: var(--text-dim);
 }
 
+.copy-crew-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+}
+
 .copy-crew-btn {
   position: relative;
   z-index: 2;
-  margin: 12px 0 0;
   padding: 12px 22px;
   border: 1px solid rgba(74, 227, 255, 0.4);
   border-radius: 999px;
